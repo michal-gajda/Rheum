@@ -66,8 +66,7 @@ public sealed class Program
         builder.Services
             .AddHealthChecksUI(options =>
             {
-                var httpPort = builder.Configuration["ASPNETCORE_HTTP_PORTS"] ?? "5080";
-                options.AddHealthCheckEndpoint("Rheum API", $"http://localhost:{httpPort}/healthz");
+                options.AddHealthCheckEndpoint("Rheum API", "http://localhost:5080/healthz");
             })
             .AddInMemoryStorage();
 
