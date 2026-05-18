@@ -11,6 +11,7 @@ RUN dotnet sln add WebApi/Rheum.WebApi.csproj
 RUN dotnet restore
 
 COPY src/ .
+COPY Directory.Build.props .
 RUN dotnet publish WebApi/Rheum.WebApi.csproj --configuration Release --no-restore --output /app/build
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0
@@ -25,6 +26,5 @@ ENV ASPNETCORE_HTTP_PORTS=5080
 EXPOSE 5080
 
 HEALTHCHECK --interval=5s --timeout=10s --retries=3 CMD curl --fail http://localhost:5080/healthz || exit 1
-
 
 ENTRYPOINT ["dotnet", "Rheum.WebApi.dll"]

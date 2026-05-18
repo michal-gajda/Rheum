@@ -8,6 +8,7 @@ using OpenTelemetry.Trace;
 using Rebus.OpenTelemetry.Configuration;
 using Rheum.Application;
 using Rheum.Infrastructure;
+using Rheum.Application.Common.Shared;
 
 public sealed class Program
 {
@@ -15,13 +16,13 @@ public sealed class Program
     {
     }
 
-    public static async Task Main(string[] args)
+    public static async Task<int> Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        const string serviceName = "Rheum.WebApi";
+        string serviceName = ServiceConstants.ServiceName;
         const string serviceNamespace = "Rheum";
-        const string serviceVersion = "1.0.0";
+        string serviceVersion = ServiceConstants.ServiceVersion;
         const string serviceInstanceId = "instance-1";
 
         var resourceBuilder = ResourceBuilder.CreateDefault()
@@ -81,8 +82,15 @@ public sealed class Program
 
         app.MapControllers();
 
-        await app.RunAsync();
+        try
+        {
+            await app.RunAsync();
 
-        Environment.Exit(0);
+            return Environment.ExitCode;
+        }
+        catch (Exception)
+        {
+            return -1;
+        }
     }
 }

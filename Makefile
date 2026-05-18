@@ -5,10 +5,10 @@ build:
 run:
 	dotnet run --project Rheum.WebApi/Rheum.WebApi.csproj
 
-docker-build:
+docker:
 	docker compose build
 
-up: docker-build
+up: docker
 	docker compose up --detach
 
 down:

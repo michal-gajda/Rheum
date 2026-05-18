@@ -18,5 +18,7 @@ public static class ServiceExtensions
         var assembly = Assembly.GetExecutingAssembly();
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+
+        services.AddHostedService<RheumWorker>();
     }
 }
