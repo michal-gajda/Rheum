@@ -1,31 +1,88 @@
-
 namespace Rheum.WebApi;
 
-public class Program
+using AspNetCore.SignalR.OpenTelemetry;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Rebus.OpenTelemetry.Configuration;
+using Rheum.Application;
+using Rheum.Infrastructure;
+
+public sealed class Program
 {
-    public static void Main(string[] args)
+    private Program()
+    {
+    }
+
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Add services to the container.
+        const string serviceName = "Rheum.WebApi";
+        const string serviceNamespace = "Rheum";
+        const string serviceVersion = "1.0.0";
+        const string serviceInstanceId = "instance-1";
+
+        var resourceBuilder = ResourceBuilder.CreateDefault()
+            .AddService(serviceName, serviceNamespace, serviceVersion, autoGenerateServiceInstanceId: false, serviceInstanceId: serviceInstanceId);
+
+        builder.Logging.AddOpenTelemetry(options =>
+        {
+            options.SetResourceBuilder(resourceBuilder);
+            options.IncludeFormattedMessage = true;
+            options.IncludeScopes = true;
+            options.ParseStateValues = true;
+            options.AddOtlpExporter();
+        });
+
+        builder.Services.AddOpenTelemetry()
+            .WithTracing(tracing => tracing
+                .SetResourceBuilder(resourceBuilder)
+                .SetSampler(new AlwaysOnSampler())
+                .AddAspNetCoreInstrumentation(options => options.RecordException = true)
+                .AddHttpClientInstrumentation(options => options.RecordException = true)
+                .AddRebusInstrumentation()
+                .AddSignalRInstrumentation()
+                .AddOtlpExporter())
+            .WithMetrics(metrics => metrics
+                .SetResourceBuilder(resourceBuilder)
+                .AddAspNetCoreInstrumentation()
+                .AddHttpClientInstrumentation()
+                .AddProcessInstrumentation()
+                .AddRebusInstrumentation()
+                .AddRuntimeInstrumentation()
+                .AddOtlpExporter());
+
+        builder.Services.AddHealthChecks();
+
+        builder.Services.AddSignalR().AddHubInstrumentation();
+
+        builder.Services.AddApplication();
+        builder.Services.AddInfrastructure(builder.Configuration);
+
+        builder.Services.AddHttpContextAccessor();
 
         builder.Services.AddControllers();
-        // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
 
         var app = builder.Build();
 
-        // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
+        app.UseHealthChecks("/healthz");
+
+        app.MapOpenApi();
+
+        app.UseSwaggerUI(options =>
         {
-            app.MapOpenApi();
-        }
+            options.SwaggerEndpoint("/openapi/v1.json", "Rheum API v1");
+        });
 
         app.UseAuthorization();
 
-
         app.MapControllers();
 
-        app.Run();
+        await app.RunAsync();
+
+        Environment.Exit(0);
     }
 }
