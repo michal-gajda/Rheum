@@ -9,6 +9,8 @@ using Rebus.OpenTelemetry.Configuration;
 using Rheum.Application;
 using Rheum.Infrastructure;
 using Rheum.Application.Common.Shared;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 public sealed class Program
 {
@@ -55,7 +57,19 @@ public sealed class Program
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter());
 
-        builder.Services.AddHealthChecks();
+        builder.Services
+            .AddHealthChecks()
+            .AddKafka(options =>
+            {
+                options.BootstrapServers = builder.Configuration.GetConnectionString("Kafka");
+            });
+        builder.Services
+            .AddHealthChecksUI(options =>
+            {
+                var httpPort = builder.Configuration["ASPNETCORE_HTTP_PORTS"] ?? "5080";
+                options.AddHealthCheckEndpoint("Rheum API", $"http://localhost:{httpPort}/healthz");
+            })
+            .AddInMemoryStorage();
 
         builder.Services.AddSignalR().AddHubInstrumentation();
 
@@ -69,7 +83,14 @@ public sealed class Program
 
         var app = builder.Build();
 
-        app.UseHealthChecks("/healthz");
+        app.MapHealthChecks("/healthz", new HealthCheckOptions
+        {
+            ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        });
+        app.MapHealthChecksUI(options =>
+        {
+            options.UIPath = "/health-ui";
+        });
 
         app.MapOpenApi();
 

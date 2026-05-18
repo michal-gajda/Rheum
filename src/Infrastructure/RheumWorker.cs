@@ -13,9 +13,9 @@ internal sealed class RheumWorker(IHostApplicationLifetime lifetime, ILogger<Rhe
         {
             try
             {
-                var i = 20;
-                var j = 0;
-                var k = i / j;
+                // var i = 20;
+                // var j = 0;
+                // var k = i / j;
             }
             catch (OperationCanceledException) { }
             catch (Exception exception)

@@ -13,7 +13,8 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://host.docker.internal:4318
       - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
     depends_on:
-      - kafka
+      kafka:
+        condition: service_healthy
     networks:
       - rheum-network
     restart: unless-stopped
@@ -46,6 +47,13 @@ services:
       OTEL_LOGS_EXPORTER: "otlp"
       OTEL_METRICS_EXPORTER: "otlp"
       OTEL_TRACES_EXPORTER: "otlp"
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-broker-api-versions.sh", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
     networks:
       - rheum-network
     extra_hosts:
