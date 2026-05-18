@@ -3,7 +3,7 @@ build:
 	dotnet build --no-restore
 
 run:
-	dotnet run --project Rheum.WebApi/Rheum.WebApi.csproj
+	dotnet run --project src/WebApi/Rheum.WebApi.csproj
 
 docker:
 	docker compose build
