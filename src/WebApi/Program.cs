@@ -82,14 +82,19 @@ public sealed class Program
 
         app.MapControllers();
 
+        using var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+        var logger = loggerFactory.CreateLogger<Program>();
+
         try
         {
             await app.RunAsync();
 
             return Environment.ExitCode;
         }
-        catch (Exception)
+        catch (Exception exception)
         {
+            logger.LogCritical(exception, "{Message}", exception.Message);
+
             return -1;
         }
     }
