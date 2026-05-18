@@ -1,0 +1,6 @@
+services:
+  kafka:
+    image: apache/kafka-native:4.2.0
+    container_name: kafka
+    ports:
+      - "9092:9092"

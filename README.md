@@ -13,5 +13,5 @@ dotnet sln add src/WebApi
 
 ```powershell
 dotnet add src/Application package Microsoft.Extensions.Logging.Abstractions
-dotnet add src/Application package Rebus.ServiceProvider
+dotnet add src/Infrastructure package Rebus.ServiceProvider
 ```
