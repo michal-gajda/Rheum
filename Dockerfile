@@ -1,6 +1,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+COPY ./nuget.config .
+COPY ./packages ./packages
 COPY src/Domain/Rheum.Domain.csproj Domain/Rheum.Domain.csproj
 COPY src/Application/Rheum.Application.csproj Application/Rheum.Application.csproj
 COPY src/Infrastructure/Rheum.Infrastructure.csproj Infrastructure/Rheum.Infrastructure.csproj
@@ -17,10 +19,16 @@ RUN dotnet publish WebApi/Rheum.WebApi.csproj --configuration Release --no-resto
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-azurelinux3.0
 WORKDIR /app
 
-RUN tdnf install -y shadow-utils; groupadd -g 10000 dotnet; useradd -u 10000 -g 10000 -s /sbin/nologin -M dotnet; tdnf clean all;
-USER dotnet:dotnet
+# RUN tdnf install -y shadow-utils; groupadd -g 10000 dotnet; useradd -u 10000 -g 10000 -s /sbin/nologin -M dotnet; tdnf clean all;
+# USER dotnet:dotnet
 
-COPY --chown=dotnet:dotnet --from=build /app/build .
+# COPY --chown=dotnet:dotnet --from=build /app/build .
+
+WORKDIR /app
+
+USER app:app
+
+COPY --chown=app:app --from=build /app/build .
 
 ENV ASPNETCORE_HTTP_PORTS=5080
 EXPOSE 5080

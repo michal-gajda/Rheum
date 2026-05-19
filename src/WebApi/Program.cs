@@ -1,16 +1,17 @@
 namespace Rheum.WebApi;
 
 using AspNetCore.SignalR.OpenTelemetry;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Rebus.OpenTelemetry.Configuration;
 using Rheum.Application;
-using Rheum.Infrastructure;
 using Rheum.Application.Common.Shared;
-using HealthChecks.UI.Client;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Rheum.Infrastructure;
+using Rheum.Infrastructure.Telemetry;
 
 public sealed class Program
 {
@@ -25,7 +26,7 @@ public sealed class Program
         string serviceName = ServiceConstants.ServiceName;
         const string serviceNamespace = "Rheum";
         string serviceVersion = ServiceConstants.ServiceVersion;
-        const string serviceInstanceId = "instance-1";
+        string serviceInstanceId = Environment.GetEnvironmentVariable("HOSTNAME") ?? Environment.MachineName;
 
         var resourceBuilder = ResourceBuilder.CreateDefault()
             .AddService(serviceName, serviceNamespace, serviceVersion, autoGenerateServiceInstanceId: false, serviceInstanceId: serviceInstanceId);
@@ -36,6 +37,7 @@ public sealed class Program
             options.IncludeFormattedMessage = true;
             options.IncludeScopes = true;
             options.ParseStateValues = true;
+            // options.AddProcessor(new HealthCheckLogFilter());
             options.AddOtlpExporter();
         });
 
@@ -43,9 +45,14 @@ public sealed class Program
             .WithTracing(tracing => tracing
                 .SetResourceBuilder(resourceBuilder)
                 .SetSampler(new AlwaysOnSampler())
-                .AddAspNetCoreInstrumentation(options => options.RecordException = true)
+                .AddAspNetCoreInstrumentation(options =>
+                {
+                    options.RecordException = true;
+                    options.Filter = context => !context.Request.Path.StartsWithSegments("/health");
+                })
                 .AddHttpClientInstrumentation(options => options.RecordException = true)
                 .AddRebusInstrumentation()
+                .AddRheumInstrumentation()
                 .AddSignalRInstrumentation()
                 .AddOtlpExporter())
             .WithMetrics(metrics => metrics
@@ -54,6 +61,7 @@ public sealed class Program
                 .AddHttpClientInstrumentation()
                 .AddProcessInstrumentation()
                 .AddRebusInstrumentation()
+                .AddRheumInstrumentation()
                 .AddRuntimeInstrumentation()
                 .AddOtlpExporter());
 
@@ -80,7 +88,19 @@ public sealed class Program
         builder.Services.AddControllers();
         builder.Services.AddOpenApi();
 
+        builder.Services.AddSingleton(TimeProvider.System);
+
         var app = builder.Build();
+
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/health"))
+            {
+                HealthRequestContext.IsHealthRequest = true;
+            }
+
+            await next();
+        });
 
         app.MapHealthChecks("/healthz", new HealthCheckOptions
         {

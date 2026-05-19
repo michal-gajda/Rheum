@@ -5,10 +5,14 @@ build:
 run:
 	dotnet run --project src/WebApi/Rheum.WebApi.csproj
 
-docker:
+image:
 	docker compose build
 
-up: docker
+push: image
+	docker push gajdaltd/rheum:latest
+
+up: image
+	docker compose down
 	docker compose up --detach
 
 down:
